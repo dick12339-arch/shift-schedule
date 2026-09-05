@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>排班總覽</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', system-ui, sans-serif;
+    background: #1C1815;
+    color: #F2EBDD;
+  }
+  .page { max-width: 1100px; margin: 0 auto; padding: 24px 16px 40px; }
+  header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 16px;
+  }
+  .eyebrow { font-size: 12px; letter-spacing: 2px; color: #C9A03E; margin-bottom: 4px; }
+  h1 { font-family: Georgia, 'Noto Serif TC', serif; font-size: 26px; margin: 0; font-weight: 600; }
+  .month-nav {
+    display: flex; align-items: center; gap: 12px;
+    background: #262019; border-radius: 8px; padding: 6px 14px;
+  }
+  .nav-arrow { font-size: 20px; color: #C9A03E; cursor: pointer; user-select: none; padding: 0 4px; }
+  .nav-arrow:hover { opacity: .75; }
+  .month-label { font-size: 15px; min-width: 92px; text-align: center; }
+
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center;
+  }
+  .btn {
+    padding: 7px 14px; border-radius: 6px; border: 1px solid #45413A;
+    background: #262019; color: #F2EBDD; font-size: 13px; cursor: pointer;
+  }
+  .btn:hover { border-color: #C9A03E; color: #C9A03E; }
+  .btn.primary { background: #C9A03E; color: #241C0C; border: none; font-weight: 600; }
+  .btn.primary:hover { opacity: .9; color: #241C0C; }
+  input[type=file] { display: none; }
+
+  .sync-status { font-size: 12px; color: #8A8175; margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #6B6459; display: inline-block; }
+  .sync-dot.ok { background: #8FBF8F; }
+  .sync-dot.err { background: #D98A8A; }
+  .sync-dot.busy { background: #E8C36A; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+  .legend-row {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+    margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #322A22;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+  .legend-text { font-size: 12.5px; color: #C7BEB0; }
+  .manage-link { margin-left: auto; font-size: 13px; color: #C9A03E; cursor: pointer; user-select: none; }
+  .manage-link:hover { opacity: .8; }
+
+  .panel { background: #262019; border-radius: 10px; padding: 14px; margin-bottom: 16px; display: none; }
+  .panel.open { display: block; }
+  .panel-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .panel-row input[type=text] {
+    flex: 1; min-width: 160px; padding: 8px 10px; border-radius: 6px;
+    border: 1px solid #45413A; background: #1C1815; color: #F2EBDD; font-size: 14px; outline: none;
+  }
+  .staff-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: flex; align-items: center; gap: 6px; background: #322A22;
+    border-radius: 20px; padding: 5px 10px 5px 12px; font-size: 13px;
+  }
+  .chip .rm { color: #D98A8A; cursor: pointer; font-size: 12px; }
+  .empty-text { font-size: 13px; color: #8A8175; }
+
+  .save-status { font-size: 12px; color: #8A8175; margin-bottom: 12px; min-height: 16px; }
+  .save-status.ok { color: #8FBF8F; }
+  .save-status.err { color: #D98A8A; }
+
+  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #322A22; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 720px; }
+  th {
+    font-size: 11.5px; font-weight: 500; text-align: center; padding: 8px 4px;
+    background: #241E17; border-bottom: 1px solid #322A22; white-space: nowrap; color: #A69B8B;
+  }
+  th.weekend { color: #D98A8A; }
+  .weekday-label { font-size: 10px; color: #8A8175; margin-top: 1px; }
+  .sticky-col { position: sticky; left: 0; background: #241E17; min-width: 92px; padding-left: 12px; z-index: 2; }
+  td.name-cell { padding: 6px 12px; font-size: 13.5px; border-bottom: 1px solid #2A241D; white-space: nowrap; background: #241E17; }
+  td.cell-wrap { padding: 3px; border-bottom: 1px solid #2A241D; text-align: center; }
+  .cell {
+    width: 30px; height: 30px; line-height: 30px; border-radius: 6px; font-size: 12.5px;
+    font-weight: 600; margin: 0 auto; cursor: pointer; transition: transform .08s ease, filter .12s ease;
+  }
+  .cell:hover { filter: brightness(0.96); }
+  .cell:active { transform: scale(0.94); }
+  .cell.pending { opacity: .5; }
+  td.counts-cell { padding: 6px 10px; border-bottom: 1px solid #2A241D; background: #211B15; }
+  .counts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; font-size: 11px; white-space: nowrap; }
+  td.foot-row, th.foot-row {
+    padding: 8px 4px; font-size: 11.5px; text-align: center; color: #C9A03E;
+    background: #211B15; font-weight: 600;
+  }
+  .loading, .empty-state {
+    padding: 36px 16px; text-align: center; color: #A69B8B; font-size: 14px;
+    background: #262019; border-radius: 10px;
+  }
+  .hint { margin-top: 14px; font-size: 12px; color: #8A8175; text-align: center; }
+  ::-webkit-scrollbar { height: 10px; width: 10px; }
+  ::-webkit-scrollbar-thumb { background: #4A443C; border-radius: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  .setup-overlay {
+    position: fixed; inset: 0; background: rgba(10,8,6,0.88);
+    display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px;
+  }
+  .setup-box {
+    background: #262019; border-radius: 12px; padding: 24px; max-width: 440px; width: 100%;
+  }
+  .setup-box h2 { font-family: Georgia, 'Noto Serif TC', serif; margin: 0 0 8px; font-size: 20px; color: #F2EBDD; }
+  .setup-box p { font-size: 13px; color: #A69B8B; line-height: 1.6; margin: 0 0 14px; }
+  .setup-box input {
+    width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #45413A;
+    background: #1C1815; color: #F2EBDD; font-size: 13px; outline: none; margin-bottom: 10px;
+  }
+  .setup-box .err { color: #D98A8A; font-size: 12px; margin-bottom: 8px; min-height: 14px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div>
+      <div class="eyebrow">月班表</div>
+      <h1>排班總覽</h1>
+    </div>
+    <div class="month-nav">
+      <span class="nav-arrow" id="prevMonth">‹</span>
+      <span class="month-label" id="monthLabel"></span>
+      <span class="nav-arrow" id="nextMonth">›</span>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <span class="btn" id="toggleManage">管理人員名單 ＋</span>
+    <span class="btn" id="refreshBtn">重新整理 ⟳</span>
+    <span class="btn" id="exportBtn">匯出備份 (JSON)</span>
+    <span class="btn" id="importBtn">匯入備份</span>
+    <span class="btn" id="apiSettingsBtn">同步設定</span>
+    <input type="file" id="importFile" accept="application/json">
+    <span class="sync-status" id="syncStatus"><span class="sync-dot" id="syncDot"></span><span id="syncText">尚未同步</span></span>
+  </div>
+
+  <div class="legend-row">
+    <div class="legend-item"><span class="legend-swatch" style="background:#F2C14E;border:1px solid #D9A93A"></span><span class="legend-text">早班 09:00–17:00</span></div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#E893A8;border:1px solid #D97490"></span><span class="legend-text">晚班 17:00–02:00</span></div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#C0392B;border:1px solid #A62F22"></span><span class="legend-text">全天班 09:00–02:00</span></div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#5B564E;border:1px solid #45413A"></span><span class="legend-text">休假</span></div>
+  </div>
+
+  <div class="panel" id="managePanel">
+    <div class="panel-row">
+      <input type="text" id="newStaffName" placeholder="輸入姓名後新增">
+      <span class="btn primary" id="addStaffBtn">新增同仁</span>
+    </div>
+    <div class="staff-chips" id="staffChips"></div>
+  </div>
+
+  <div class="save-status" id="saveStatus"></div>
+
+  <div id="tableArea"><div class="loading">載入中…</div></div>
+
+  <div class="hint">點擊格子即可依序切換：未排 → 早班 → 晚班 → 全天班 → 休假。所有同仁看到的是同一份雲端班表，每次操作都會同步。</div>
+</div>
+
+<div class="setup-overlay" id="setupOverlay" style="display:none">
+  <div class="setup-box">
+    <h2>設定同步網址</h2>
+    <p>請貼上部署好的 Google Apps Script 網頁應用程式網址（結尾通常是 /exec）。所有同仁只要用同一個網址，就會看到同一份班表，不需要登入任何帳號。</p>
+    <input type="text" id="apiUrlInput" placeholder="https://script.google.com/macros/s/xxxx/exec">
+    <div class="err" id="setupErr"></div>
+    <span class="btn primary" id="saveApiUrlBtn">儲存並開始使用</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  var SHIFT_ORDER = ["", "day", "night", "full", "off"];
+  var SHIFT_META = {
+    "":     { label: "－", full: "未排班",              bg: "#FBF9F4", fg: "#B9AF9E" },
+    day:    { label: "早", full: "早班 09:00–17:00",     bg: "#F2C14E", fg: "#3A2E12" },
+    night:  { label: "晚", full: "晚班 17:00–02:00",     bg: "#E893A8", fg: "#4A1F2B" },
+    full:   { label: "全", full: "全天班 09:00–02:00",   bg: "#C0392B", fg: "#FCEAE7" },
+    off:    { label: "休", full: "休假",                 bg: "#5B564E", fg: "#EDE7DA" }
+  };
+  var WEEKDAY_ZH = ["日", "一", "二", "三", "四", "五", "六"];
+  var API_URL_KEY = "shift-scheduler:api-url"; // local device config only, not schedule data
+  var LOCAL_CACHE_KEY = "shift-scheduler:cache";
+  var POLL_INTERVAL_MS = 20000;
+
+  var today = new Date();
+  var state = {
+    year: today.getFullYear(),
+    month: today.getMonth() + 1,
+    staffList: [],
+    schedules: {} // { "YYYY-MM": { staffId: { day: type } } }
+  };
+  var apiUrl = localStorage.getItem(API_URL_KEY) || "";
+  var pollTimer = null;
+
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function uid() { return Math.random().toString(36).slice(2, 10); }
+  function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+  function ymKey(y, m) { return y + "-" + pad(m); }
+
+  function setSyncStatus(mode, text) {
+    var dot = document.getElementById("syncDot");
+    var t = document.getElementById("syncText");
+    dot.className = "sync-dot" + (mode ? " " + mode : "");
+    t.textContent = text;
+  }
+
+  function flashSaveStatus(text, cls) {
+    var el = document.getElementById("saveStatus");
+    el.textContent = text;
+    el.className = "save-status " + (cls || "");
+    setTimeout(function () { el.textContent = ""; el.className = "save-status"; }, 1800);
+  }
+
+  function cacheLocally() {
+    try { localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify({ staffList: state.staffList, schedules: state.schedules })); }
+    catch (e) {}
+  }
+  function loadLocalCache() {
+    try {
+      var raw = localStorage.getItem(LOCAL_CACHE_KEY);
+      if (raw) {
+        var d = JSON.parse(raw);
+        state.staffList = d.staffList || [];
+        state.schedules = d.schedules || {};
+      }
+    } catch (e) {}
+  }
+
+  // ---- Remote sync ----
+  function fetchRemote() {
+    return fetch(apiUrl, { method: "GET" })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        state.staffList = data.staffList || [];
+        state.schedules = data.schedules || {};
+        cacheLocally();
+        return data;
+      });
+  }
+
+  function pushRemote(mutateFn) {
+    // read-modify-write: pull latest, apply local change, write back, refresh UI
+    setSyncStatus("busy", "同步中…");
+    return fetch(apiUrl, { method: "GET" })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        var next = { staffList: data.staffList || [], schedules: data.schedules || {} };
+        mutateFn(next);
+        return fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(next)
+        }).then(function (res) { return res.json(); }).then(function (result) {
+          if (!result.ok) throw new Error(result.error || "unknown");
+          state.staffList = next.staffList;
+          state.schedules = next.schedules;
+          cacheLocally();
+          setSyncStatus("ok", "已同步 " + new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" }));
+          return true;
+        });
+      })
+      .catch(function (err) {
+        setSyncStatus("err", "同步失敗，請檢查網路或設定");
+        flashSaveStatus("同步失敗：" + err.message, "err");
+        throw err;
+      });
+  }
+
+  function refreshFromRemote(showLoading) {
+    if (showLoading) setSyncStatus("busy", "讀取中…");
+    return fetchRemote().then(function () {
+      setSyncStatus("ok", "已同步 " + new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" }));
+      renderStaffChips();
+      renderTable();
+    }).catch(function (err) {
+      setSyncStatus("err", "讀取失敗，顯示上次快取資料");
+      renderStaffChips();
+      renderTable();
+    });
+  }
+
+  // ---- Rendering ----
+  function renderMonthLabel() {
+    document.getElementById("monthLabel").textContent = state.year + " 年 " + state.month + " 月";
+  }
+
+  function renderStaffChips() {
+    var wrap = document.getElementById("staffChips");
+    wrap.innerHTML = "";
+    if (state.staffList.length === 0) {
+      var e = document.createElement("span");
+      e.className = "empty-text";
+      e.textContent = "尚未加入任何同仁";
+      wrap.appendChild(e);
+      return;
+    }
+    state.staffList.forEach(function (s) {
+      var chip = document.createElement("span");
+      chip.className = "chip";
+      chip.textContent = s.name;
+      var rm = document.createElement("span");
+      rm.className = "rm";
+      rm.textContent = "✕";
+      rm.onclick = function () { removeStaff(s.id); };
+      chip.appendChild(rm);
+      wrap.appendChild(chip);
+    });
+  }
+
+  function currentMonthRecord() {
+    return state.schedules[ymKey(state.year, state.month)] || {};
+  }
+
+  function staffCounts(staffId) {
+    var rec = currentMonthRecord()[staffId] || {};
+    var counts = { day: 0, night: 0, full: 0, off: 0 };
+    Object.keys(rec).forEach(function (d) {
+      var v = rec[d];
+      if (counts[v] !== undefined) counts[v] += 1;
+    });
+    return counts;
+  }
+
+  function dayCoverage(day) {
+    var rec = currentMonthRecord();
+    var count = 0;
+    state.staffList.forEach(function (s) {
+      var v = rec[s.id] && rec[s.id][day];
+      if (v === "day" || v === "night" || v === "full") count += 1;
+    });
+    return count;
+  }
+
+  function renderCounts(staffId) {
+    var el = document.getElementById("counts-" + staffId);
+    if (!el) return;
+    var c = staffCounts(staffId);
+    el.innerHTML =
+      '<span style="color:#F2C14E">早' + c.day + '</span>' +
+      '<span style="color:#E893A8">晚' + c.night + '</span>' +
+      '<span style="color:#C0392B">全' + c.full + '</span>' +
+      '<span style="color:#A69B8B">休' + c.off + '</span>';
+  }
+
+  function renderFooter() {
+    var numDays = daysInMonth(state.year, state.month);
+    for (var d = 1; d <= numDays; d++) {
+      var el = document.getElementById("cov-" + d);
+      if (el) el.textContent = dayCoverage(d);
+    }
+  }
+
+  function renderTable() {
+    var area = document.getElementById("tableArea");
+    area.innerHTML = "";
+    if (state.staffList.length === 0) {
+      var e = document.createElement("div");
+      e.className = "empty-state";
+      e.textContent = "尚未有同仁名單，請先點選「管理人員名單」新增同仁。";
+      area.appendChild(e);
+      return;
+    }
+    var numDays = daysInMonth(state.year, state.month);
+    var monthRec = currentMonthRecord();
+    var wrap = document.createElement("div");
+    wrap.className = "table-wrap";
+    var table = document.createElement("table");
+
+    var thead = document.createElement("thead");
+    var trh = document.createElement("tr");
+    var thName = document.createElement("th");
+    thName.className = "sticky-col";
+    thName.style.textAlign = "left";
+    thName.textContent = "同仁";
+    trh.appendChild(thName);
+    for (var d = 1; d <= numDays; d++) {
+      var wd = new Date(state.year, state.month - 1, d).getDay();
+      var th = document.createElement("th");
+      if (wd === 0 || wd === 6) th.className = "weekend";
+      th.innerHTML = '<div>' + d + '</div><div class="weekday-label">' + WEEKDAY_ZH[wd] + '</div>';
+      trh.appendChild(th);
+    }
+    var thStat = document.createElement("th");
+    thStat.textContent = "統計";
+    trh.appendChild(thStat);
+    thead.appendChild(trh);
+    table.appendChild(thead);
+
+    var tbody = document.createElement("tbody");
+    state.staffList.forEach(function (s) {
+      var tr = document.createElement("tr");
+      var tdName = document.createElement("td");
+      tdName.className = "name-cell sticky-col";
+      tdName.textContent = s.name;
+      tr.appendChild(tdName);
+
+      for (var d = 1; d <= numDays; d++) {
+        (function (day) {
+          var td = document.createElement("td");
+          td.className = "cell-wrap";
+          var rec = monthRec[s.id] || {};
+          var val = rec[day] || "";
+          var meta = SHIFT_META[val];
+          var cell = document.createElement("div");
+          cell.className = "cell";
+          cell.style.background = meta.bg;
+          cell.style.color = meta.fg;
+          cell.title = meta.full;
+          cell.textContent = meta.label;
+          cell.onclick = function () { cycleShift(s.id, day, cell); };
+          td.appendChild(cell);
+          tr.appendChild(td);
+        })(d);
+      }
+
+      var tdCounts = document.createElement("td");
+      tdCounts.className = "counts-cell";
+      var countsGrid = document.createElement("div");
+      countsGrid.className = "counts-grid";
+      countsGrid.id = "counts-" + s.id;
+      tdCounts.appendChild(countsGrid);
+      tr.appendChild(tdCounts);
+
+      tbody.appendChild(tr);
+      renderCounts(s.id);
+    });
+
+    var footTr = document.createElement("tr");
+    var footName = document.createElement("td");
+    footName.className = "foot-row sticky-col";
+    footName.textContent = "當日上班人數";
+    footTr.appendChild(footName);
+    for (var d2 = 1; d2 <= numDays; d2++) {
+      var footTd = document.createElement("td");
+      footTd.className = "foot-row";
+      footTd.id = "cov-" + d2;
+      footTd.textContent = dayCoverage(d2);
+      footTr.appendChild(footTd);
+    }
+    var footStat = document.createElement("td");
+    footStat.className = "foot-row";
+    footTr.appendChild(footStat);
+    tbody.appendChild(footTr);
+
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    area.appendChild(wrap);
+  }
+
+  // ---- Mutations (each does read-modify-write against remote) ----
+  function cycleShift(staffId, day, cellEl) {
+    var key = ymKey(state.year, state.month);
+    var current = (currentMonthRecord()[staffId] || {})[day] || "";
+    var idx = SHIFT_ORDER.indexOf(current);
+    var next = SHIFT_ORDER[(idx + 1) % SHIFT_ORDER.length];
+    var meta = SHIFT_META[next];
+    cellEl.classList.add("pending");
+    cellEl.style.background = meta.bg;
+    cellEl.style.color = meta.fg;
+    cellEl.title = meta.full;
+    cellEl.textContent = meta.label;
+
+    pushRemote(function (data) {
+      if (!data.schedules[key]) data.schedules[key] = {};
+      if (!data.schedules[key][staffId]) data.schedules[key][staffId] = {};
+      data.schedules[key][staffId][day] = next;
+    }).then(function () {
+      cellEl.classList.remove("pending");
+      renderCounts(staffId);
+      renderFooter();
+    }).catch(function () {
+      cellEl.classList.remove("pending");
+      // revert visual on failure by re-rendering from last known good state
+      renderTable();
+    });
+  }
+
+  function addStaff() {
+    var input = document.getElementById("newStaffName");
+    var name = input.value.trim();
+    if (!name) return;
+    var newStaff = { id: uid(), name: name };
+    input.value = "";
+    pushRemote(function (data) {
+      data.staffList.push(newStaff);
+    }).then(function () {
+      renderStaffChips();
+      renderTable();
+      flashSaveStatus("已新增", "ok");
+    });
+  }
+
+  function removeStaff(id) {
+    pushRemote(function (data) {
+      data.staffList = data.staffList.filter(function (x) { return x.id !== id; });
+    }).then(function () {
+      renderStaffChips();
+      renderTable();
+      flashSaveStatus("已刪除", "ok");
+    });
+  }
+
+  function refresh() {
+    renderMonthLabel();
+    renderTable();
+  }
+
+  // ---- Wiring ----
+  document.getElementById("prevMonth").onclick = function () {
+    state.month -= 1;
+    if (state.month < 1) { state.month = 12; state.year -= 1; }
+    refresh();
+  };
+  document.getElementById("nextMonth").onclick = function () {
+    state.month += 1;
+    if (state.month > 12) { state.month = 1; state.year += 1; }
+    refresh();
+  };
+  document.getElementById("toggleManage").onclick = function () {
+    var panel = document.getElementById("managePanel");
+    var open = panel.classList.toggle("open");
+    this.textContent = open ? "關閉人員管理 ✕" : "管理人員名單 ＋";
+  };
+  document.getElementById("addStaffBtn").onclick = addStaff;
+  document.getElementById("newStaffName").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") addStaff();
+  });
+  document.getElementById("refreshBtn").onclick = function () { refreshFromRemote(true); };
+
+  document.getElementById("exportBtn").onclick = function () {
+    var payload = { exportedAt: new Date().toISOString(), staffList: state.staffList, schedules: state.schedules };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "排班存檔_" + state.year + pad(state.month) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    flashSaveStatus("已匯出備份", "ok");
+  };
+
+  document.getElementById("importBtn").onclick = function () { document.getElementById("importFile").click(); };
+  document.getElementById("importFile").addEventListener("change", function (e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var data = JSON.parse(reader.result);
+        pushRemote(function (remote) {
+          remote.staffList = data.staffList || remote.staffList;
+          remote.schedules = Object.assign({}, remote.schedules, data.schedules || {});
+        }).then(function () {
+          renderStaffChips();
+          refresh();
+          flashSaveStatus("匯入成功並已同步", "ok");
+        });
+      } catch (err) {
+        flashSaveStatus("匯入失敗，檔案格式不正確", "err");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+  document.getElementById("apiSettingsBtn").onclick = function () { showSetup(true); };
+
+  // ---- Setup overlay ----
+  function showSetup(allowCancel) {
+    var overlay = document.getElementById("setupOverlay");
+    var input = document.getElementById("apiUrlInput");
+    input.value = apiUrl || "";
+    document.getElementById("setupErr").textContent = "";
+    overlay.style.display = "flex";
+  }
+  document.getElementById("saveApiUrlBtn").onclick = function () {
+    var val = document.getElementById("apiUrlInput").value.trim();
+    if (!/^https:\/\/script\.google(usercontent)?\.com\/.*\/exec$/.test(val)) {
+      document.getElementById("setupErr").textContent = "網址格式看起來不對，請確認是以 /exec 結尾的部署網址";
+      return;
+    }
+    apiUrl = val;
+    localStorage.setItem(API_URL_KEY, apiUrl);
+    document.getElementById("setupOverlay").style.display = "none";
+    startApp();
+  };
+
+  function startApp() {
+    loadLocalCache();
+    renderMonthLabel();
+    renderStaffChips();
+    renderTable();
+    refreshFromRemote(true);
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(function () { refreshFromRemote(false); }, POLL_INTERVAL_MS);
+  }
+
+  // init
+  if (!apiUrl) {
+    showSetup(false);
+  } else {
+    startApp();
+  }
+})();
+</script>
+</body>
+</html>
