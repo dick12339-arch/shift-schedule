@@ -118,6 +118,28 @@
   ::-webkit-scrollbar-thumb { background: #4A443C; border-radius: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
 
+  .clock-section {
+    background: #262019; border-radius: 10px; padding: 16px; margin-bottom: 20px;
+  }
+  .clock-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; color: #F2EBDD; }
+  .clock-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .clock-row select {
+    padding: 8px 10px; border-radius: 6px; border: 1px solid #45413A;
+    background: #1C1815; color: #F2EBDD; font-size: 14px; outline: none; min-width: 120px;
+  }
+  .clock-btn {
+    padding: 9px 18px; border-radius: 6px; border: none; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .clock-btn.in { background: #F2C14E; color: #3A2E12; }
+  .clock-btn.out { background: #E893A8; color: #4A1F2B; }
+  .clock-btn:disabled { opacity: .5; cursor: default; }
+  .clock-msg { font-size: 13px; min-height: 18px; margin-bottom: 8px; }
+  .clock-msg.ok { color: #8FBF8F; }
+  .clock-msg.err { color: #D98A8A; }
+  .clock-log { font-size: 12.5px; color: #C7BEB0; }
+  .clock-log-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #322A22; }
+  .clock-log-row:last-child { border-bottom: none; }
+
   .setup-overlay {
     position: fixed; inset: 0; background: rgba(10,8,6,0.88);
     display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px;
@@ -149,6 +171,7 @@
   </header>
 
   <div class="toolbar">
+    <span class="btn" id="lockToggleBtn">🔒 編輯已鎖定（點擊解鎖）</span>
     <span class="btn" id="toggleManage">管理人員名單 ＋</span>
     <span class="btn" id="refreshBtn">重新整理 ⟳</span>
     <span class="btn" id="exportBtn">匯出備份 (JSON)</span>
@@ -163,6 +186,17 @@
     <div class="legend-item"><span class="legend-swatch" style="background:#E893A8;border:1px solid #D97490"></span><span class="legend-text">晚班 17:00–02:00</span></div>
     <div class="legend-item"><span class="legend-swatch" style="background:#C0392B;border:1px solid #A62F22"></span><span class="legend-text">全天班 09:00–02:00</span></div>
     <div class="legend-item"><span class="legend-swatch" style="background:#5B564E;border:1px solid #45413A"></span><span class="legend-text">休假</span></div>
+  </div>
+
+  <div class="clock-section">
+    <div class="clock-title">定位打卡</div>
+    <div class="clock-row">
+      <select id="clockStaffSelect"></select>
+      <span class="clock-btn in" id="clockInBtn">上班打卡</span>
+      <span class="clock-btn out" id="clockOutBtn">下班打卡</span>
+    </div>
+    <div class="clock-msg" id="clockMsg"></div>
+    <div class="clock-log" id="clockLog"></div>
   </div>
 
   <div class="panel" id="managePanel">
@@ -190,6 +224,19 @@
   </div>
 </div>
 
+<div class="setup-overlay" id="unlockOverlay" style="display:none">
+  <div class="setup-box">
+    <h2>輸入密碼解鎖編輯</h2>
+    <p>排班編輯與人員名單管理需要密碼才能操作，打卡功能不受影響。</p>
+    <input type="password" id="unlockPasswordInput" placeholder="請輸入密碼" inputmode="numeric">
+    <div class="err" id="unlockErr"></div>
+    <div class="clock-row" style="margin-top:4px;">
+      <span class="btn primary" id="unlockSubmitBtn">解鎖</span>
+      <span class="btn" id="unlockCancelBtn">取消</span>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   var SHIFT_ORDER = ["", "day", "night", "full", "off"];
@@ -205,12 +252,65 @@
   var LOCAL_CACHE_KEY = "shift-scheduler:cache";
   var POLL_INTERVAL_MS = 20000;
 
+  // ---- 打卡地點設定 ----
+  var STORE_LAT = 24.1382662;
+  var STORE_LNG = 120.6450695;
+  var ALLOWED_RADIUS_M = 200;
+
+  // ---- 編輯鎖定設定 ----
+  var UNLOCK_PASSWORD = "0706";
+  var UNLOCK_SESSION_KEY = "shift-scheduler:unlocked";
+  var pendingUnlockCallback = null;
+
+  function isUnlocked() {
+    return sessionStorage.getItem(UNLOCK_SESSION_KEY) === "1";
+  }
+  function lockNow() {
+    sessionStorage.removeItem(UNLOCK_SESSION_KEY);
+    updateLockUI();
+  }
+  function requestUnlock(callback) {
+    pendingUnlockCallback = callback;
+    var overlay = document.getElementById("unlockOverlay");
+    document.getElementById("unlockPasswordInput").value = "";
+    document.getElementById("unlockErr").textContent = "";
+    overlay.style.display = "flex";
+    setTimeout(function () { document.getElementById("unlockPasswordInput").focus(); }, 50);
+  }
+  function updateLockUI() {
+    var btn = document.getElementById("lockToggleBtn");
+    if (isUnlocked()) {
+      btn.textContent = "🔓 編輯已解鎖（點擊鎖定）";
+    } else {
+      btn.textContent = "🔒 編輯已鎖定（點擊解鎖）";
+    }
+  }
+
+  function haversineDistance(lat1, lng1, lat2, lng2) {
+    var R = 6371000; // 地球半徑(公尺)
+    var toRad = function (d) { return d * Math.PI / 180; };
+    var dLat = toRad(lat2 - lat1);
+    var dLng = toRad(lng2 - lng1);
+    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  function todayKey() {
+    var d = new Date();
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+  function pad2(n) { return String(n).padStart(2, "0"); }
+
   var today = new Date();
   var state = {
     year: today.getFullYear(),
     month: today.getMonth() + 1,
     staffList: [],
-    schedules: {} // { "YYYY-MM": { staffId: { day: type } } }
+    schedules: {}, // { "YYYY-MM": { staffId: { day: type } } }
+    clockins: {} // { "YYYY-MM-DD": { staffId: [ {type:"in"/"out", time, lat, lng, distance} ] } }
   };
   var DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbxCJVTtQF8YyGYFsT89hG2mEJHV1KR-3rQYzA86Ehznc5zoDqSffah5bYSxmlq_JZIC/exec";
   var apiUrl = localStorage.getItem(API_URL_KEY) || DEFAULT_API_URL;
@@ -236,7 +336,7 @@
   }
 
   function cacheLocally() {
-    try { localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify({ staffList: state.staffList, schedules: state.schedules })); }
+    try { localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify({ staffList: state.staffList, schedules: state.schedules, clockins: state.clockins })); }
     catch (e) {}
   }
   function loadLocalCache() {
@@ -246,6 +346,7 @@
         var d = JSON.parse(raw);
         state.staffList = d.staffList || [];
         state.schedules = d.schedules || {};
+        state.clockins = d.clockins || {};
       }
     } catch (e) {}
   }
@@ -257,6 +358,7 @@
       .then(function (data) {
         state.staffList = data.staffList || [];
         state.schedules = data.schedules || {};
+        state.clockins = data.clockins || {};
         cacheLocally();
         return data;
       });
@@ -268,7 +370,7 @@
     return fetch(apiUrl, { method: "GET" })
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        var next = { staffList: data.staffList || [], schedules: data.schedules || {} };
+        var next = { staffList: data.staffList || [], schedules: data.schedules || {}, clockins: data.clockins || {} };
         mutateFn(next);
         return fetch(apiUrl, {
           method: "POST",
@@ -278,6 +380,7 @@
           if (!result.ok) throw new Error(result.error || "unknown");
           state.staffList = next.staffList;
           state.schedules = next.schedules;
+          state.clockins = next.clockins;
           cacheLocally();
           setSyncStatus("ok", "已同步 " + new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" }));
           return true;
@@ -296,10 +399,12 @@
       setSyncStatus("ok", "已同步 " + new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" }));
       renderStaffChips();
       renderTable();
+      renderClockPanel();
     }).catch(function (err) {
       setSyncStatus("err", "讀取失敗，顯示上次快取資料");
       renderStaffChips();
       renderTable();
+      renderClockPanel();
     });
   }
 
@@ -329,6 +434,110 @@
       chip.appendChild(rm);
       wrap.appendChild(chip);
     });
+  }
+
+  // ---- 定位打卡 ----
+  function renderClockPanel() {
+    var select = document.getElementById("clockStaffSelect");
+    var prevVal = select.value;
+    select.innerHTML = "";
+    if (state.staffList.length === 0) {
+      var opt = document.createElement("option");
+      opt.textContent = "請先新增同仁";
+      select.appendChild(opt);
+    } else {
+      state.staffList.forEach(function (s) {
+        var opt = document.createElement("option");
+        opt.value = s.id;
+        opt.textContent = s.name;
+        select.appendChild(opt);
+      });
+      if (prevVal && state.staffList.some(function (s) { return s.id === prevVal; })) {
+        select.value = prevVal;
+      }
+    }
+
+    var log = document.getElementById("clockLog");
+    var todayRec = state.clockins[todayKey()] || {};
+    var rows = [];
+    Object.keys(todayRec).forEach(function (staffId) {
+      var staff = state.staffList.find(function (s) { return s.id === staffId; });
+      var name = staff ? staff.name : "(已刪除的同仁)";
+      todayRec[staffId].forEach(function (rec) {
+        rows.push({ name: name, type: rec.type, time: rec.time, distance: rec.distance });
+      });
+    });
+    rows.sort(function (a, b) { return a.time.localeCompare(b.time); });
+    if (rows.length === 0) {
+      log.innerHTML = '<div class="empty-text">今天還沒有打卡紀錄</div>';
+    } else {
+      log.innerHTML = rows.map(function (r) {
+        var typeLabel = r.type === "in" ? "上班" : "下班";
+        return '<div class="clock-log-row"><span>' + r.name + ' · ' + typeLabel + '</span><span>' + r.time + '（距店 ' + Math.round(r.distance) + ' 公尺）</span></div>';
+      }).join("");
+    }
+  }
+
+  function setClockMsg(text, cls) {
+    var el = document.getElementById("clockMsg");
+    el.textContent = text;
+    el.className = "clock-msg " + (cls || "");
+  }
+
+  function doClockAction(type) {
+    var select = document.getElementById("clockStaffSelect");
+    var staffId = select.value;
+    if (!staffId || state.staffList.length === 0) {
+      setClockMsg("請先新增同仁名單", "err");
+      return;
+    }
+    if (!navigator.geolocation) {
+      setClockMsg("此瀏覽器不支援定位功能", "err");
+      return;
+    }
+    setClockMsg("定位中…", "");
+    document.getElementById("clockInBtn").setAttribute("disabled", "disabled");
+    document.getElementById("clockOutBtn").setAttribute("disabled", "disabled");
+
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var lat = pos.coords.latitude;
+      var lng = pos.coords.longitude;
+      var dist = haversineDistance(lat, lng, STORE_LAT, STORE_LNG);
+
+      if (dist > ALLOWED_RADIUS_M) {
+        setClockMsg("距離店家 " + Math.round(dist) + " 公尺，超出 " + ALLOWED_RADIUS_M + " 公尺範圍，打卡失敗", "err");
+        document.getElementById("clockInBtn").removeAttribute("disabled");
+        document.getElementById("clockOutBtn").removeAttribute("disabled");
+        return;
+      }
+
+      var now = new Date();
+      var timeStr = pad2(now.getHours()) + ":" + pad2(now.getMinutes()) + ":" + pad2(now.getSeconds());
+      var day = todayKey();
+      var record = { type: type, time: timeStr, lat: lat, lng: lng, distance: dist };
+
+      pushRemote(function (data) {
+        if (!data.clockins[day]) data.clockins[day] = {};
+        if (!data.clockins[day][staffId]) data.clockins[day][staffId] = [];
+        data.clockins[day][staffId].push(record);
+      }).then(function () {
+        setClockMsg((type === "in" ? "上班" : "下班") + "打卡成功（距店 " + Math.round(dist) + " 公尺）", "ok");
+        renderClockPanel();
+      }).catch(function () {
+        setClockMsg("同步失敗，請再試一次", "err");
+      }).finally(function () {
+        document.getElementById("clockInBtn").removeAttribute("disabled");
+        document.getElementById("clockOutBtn").removeAttribute("disabled");
+      });
+    }, function (err) {
+      var msg = "無法取得定位";
+      if (err.code === 1) msg = "定位權限被拒絕，請至瀏覽器設定開啟定位權限";
+      else if (err.code === 2) msg = "無法取得目前位置";
+      else if (err.code === 3) msg = "定位逾時，請再試一次";
+      setClockMsg(msg, "err");
+      document.getElementById("clockInBtn").removeAttribute("disabled");
+      document.getElementById("clockOutBtn").removeAttribute("disabled");
+    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
   }
 
   function currentMonthRecord() {
@@ -437,7 +646,18 @@
             if (key === val) opt.selected = true;
             select.appendChild(opt);
           });
-          select.onchange = function () { setShift(s.id, day, select.value, select); };
+          select.onchange = function () {
+            var newVal = select.value;
+            if (!isUnlocked()) {
+              select.value = val;
+              requestUnlock(function () {
+                select.value = newVal;
+                setShift(s.id, day, newVal, select);
+              });
+              return;
+            }
+            setShift(s.id, day, newVal, select);
+          };
           td.appendChild(select);
           tr.appendChild(td);
         })(d);
@@ -496,6 +716,7 @@
       renderFooter();
     }).catch(function () {
       selectEl.classList.remove("pending");
+      // revert visual on failure by re-rendering from last known good state
       renderTable();
     });
   }
@@ -511,6 +732,7 @@
     }).then(function () {
       renderStaffChips();
       renderTable();
+      renderClockPanel();
       flashSaveStatus("已新增", "ok");
     });
   }
@@ -521,6 +743,7 @@
     }).then(function () {
       renderStaffChips();
       renderTable();
+      renderClockPanel();
       flashSaveStatus("已刪除", "ok");
     });
   }
@@ -542,18 +765,27 @@
     refresh();
   };
   document.getElementById("toggleManage").onclick = function () {
+    if (!isUnlocked()) {
+      requestUnlock(function () { openManagePanel(); });
+      return;
+    }
+    openManagePanel();
+  };
+  function openManagePanel() {
     var panel = document.getElementById("managePanel");
     var open = panel.classList.toggle("open");
-    this.textContent = open ? "關閉人員管理 ✕" : "管理人員名單 ＋";
-  };
+    document.getElementById("toggleManage").textContent = open ? "關閉人員管理 ✕" : "管理人員名單 ＋";
+  }
   document.getElementById("addStaffBtn").onclick = addStaff;
   document.getElementById("newStaffName").addEventListener("keydown", function (e) {
     if (e.key === "Enter") addStaff();
   });
   document.getElementById("refreshBtn").onclick = function () { refreshFromRemote(true); };
+  document.getElementById("clockInBtn").onclick = function () { doClockAction("in"); };
+  document.getElementById("clockOutBtn").onclick = function () { doClockAction("out"); };
 
   document.getElementById("exportBtn").onclick = function () {
-    var payload = { exportedAt: new Date().toISOString(), staffList: state.staffList, schedules: state.schedules };
+    var payload = { exportedAt: new Date().toISOString(), staffList: state.staffList, schedules: state.schedules, clockins: state.clockins };
     var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
@@ -591,6 +823,33 @@
   });
 
   document.getElementById("apiSettingsBtn").onclick = function () { showSetup(true); };
+  document.getElementById("lockToggleBtn").onclick = function () {
+    if (isUnlocked()) {
+      lockNow();
+    } else {
+      requestUnlock(function () { updateLockUI(); });
+    }
+  };
+  document.getElementById("unlockSubmitBtn").onclick = function () {
+    var val = document.getElementById("unlockPasswordInput").value;
+    if (val === UNLOCK_PASSWORD) {
+      sessionStorage.setItem(UNLOCK_SESSION_KEY, "1");
+      document.getElementById("unlockOverlay").style.display = "none";
+      updateLockUI();
+      var cb = pendingUnlockCallback;
+      pendingUnlockCallback = null;
+      if (cb) cb();
+    } else {
+      document.getElementById("unlockErr").textContent = "密碼不正確，請再試一次";
+    }
+  };
+  document.getElementById("unlockPasswordInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") document.getElementById("unlockSubmitBtn").click();
+  });
+  document.getElementById("unlockCancelBtn").onclick = function () {
+    document.getElementById("unlockOverlay").style.display = "none";
+    pendingUnlockCallback = null;
+  };
 
   // ---- Setup overlay ----
   function showSetup(allowCancel) {
@@ -617,6 +876,8 @@
     renderMonthLabel();
     renderStaffChips();
     renderTable();
+    renderClockPanel();
+    updateLockUI();
     refreshFromRemote(true);
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(function () { refreshFromRemote(false); }, POLL_INTERVAL_MS);
