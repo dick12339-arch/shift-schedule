@@ -140,6 +140,21 @@
   .clock-log-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #322A22; }
   .clock-log-row:last-child { border-bottom: none; }
 
+  .query-section {
+    background: #262019; border-radius: 10px; padding: 16px; margin-bottom: 20px;
+  }
+  .query-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .query-row select, .query-row input[type=date] {
+    padding: 8px 10px; border-radius: 6px; border: 1px solid #45413A;
+    background: #1C1815; color: #F2EBDD; font-size: 14px; outline: none;
+  }
+  .query-results { font-size: 12.5px; }
+  .query-day-group { margin-bottom: 10px; }
+  .query-day-title { font-size: 12px; color: #C9A03E; font-weight: 600; margin-bottom: 4px; }
+  .query-row-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #322A22; color: #C7BEB0; }
+  .query-row-item:last-child { border-bottom: none; }
+  .query-summary { font-size: 12px; color: #8A8175; margin-top: 8px; }
+
   .setup-overlay {
     position: fixed; inset: 0; background: rgba(10,8,6,0.88);
     display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px;
@@ -197,6 +212,18 @@
     </div>
     <div class="clock-msg" id="clockMsg"></div>
     <div class="clock-log" id="clockLog"></div>
+  </div>
+
+  <div class="query-section">
+    <div class="clock-title">打卡紀錄查詢</div>
+    <div class="query-row">
+      <select id="queryStaffSelect"></select>
+      <input type="date" id="queryStartDate">
+      <span style="color:#8A8175;font-size:13px;">至</span>
+      <input type="date" id="queryEndDate">
+      <span class="btn primary" id="querySubmitBtn">查詢</span>
+    </div>
+    <div class="query-results" id="queryResults"></div>
   </div>
 
   <div class="panel" id="managePanel">
@@ -365,7 +392,6 @@
   }
 
   function pushRemote(mutateFn) {
-    // read-modify-write: pull latest, apply local change, write back, refresh UI
     setSyncStatus("busy", "同步中…");
     return fetch(apiUrl, { method: "GET" })
       .then(function (res) { return res.json(); })
@@ -400,11 +426,13 @@
       renderStaffChips();
       renderTable();
       renderClockPanel();
+      renderQueryStaffSelect();
     }).catch(function (err) {
       setSyncStatus("err", "讀取失敗，顯示上次快取資料");
       renderStaffChips();
       renderTable();
       renderClockPanel();
+      renderQueryStaffSelect();
     });
   }
 
@@ -482,6 +510,77 @@
     var el = document.getElementById("clockMsg");
     el.textContent = text;
     el.className = "clock-msg " + (cls || "");
+  }
+
+  // ---- 打卡紀錄查詢 ----
+  function renderQueryStaffSelect() {
+    var select = document.getElementById("queryStaffSelect");
+    var prevVal = select.value;
+    select.innerHTML = "";
+    if (state.staffList.length === 0) {
+      var opt = document.createElement("option");
+      opt.textContent = "請先新增同仁";
+      select.appendChild(opt);
+    } else {
+      state.staffList.forEach(function (s) {
+        var opt = document.createElement("option");
+        opt.value = s.id;
+        opt.textContent = s.name;
+        select.appendChild(opt);
+      });
+      if (prevVal && state.staffList.some(function (s) { return s.id === prevVal; })) {
+        select.value = prevVal;
+      }
+    }
+  }
+
+  function defaultQueryDates() {
+    var now = new Date();
+    var first = new Date(now.getFullYear(), now.getMonth(), 1);
+    var startInput = document.getElementById("queryStartDate");
+    var endInput = document.getElementById("queryEndDate");
+    if (!startInput.value) startInput.value = first.getFullYear() + "-" + pad2(first.getMonth() + 1) + "-" + pad2(first.getDate());
+    if (!endInput.value) endInput.value = todayKey();
+  }
+
+  function runQuery() {
+    var staffId = document.getElementById("queryStaffSelect").value;
+    var start = document.getElementById("queryStartDate").value;
+    var end = document.getElementById("queryEndDate").value;
+    var results = document.getElementById("queryResults");
+
+    if (!staffId || state.staffList.length === 0) {
+      results.innerHTML = '<div class="empty-text">請先新增同仁名單</div>';
+      return;
+    }
+    if (!start || !end) {
+      results.innerHTML = '<div class="empty-text">請選擇查詢的日期範圍</div>';
+      return;
+    }
+
+    var staff = state.staffList.find(function (s) { return s.id === staffId; });
+    var dayKeys = Object.keys(state.clockins).filter(function (d) {
+      return d >= start && d <= end && state.clockins[d][staffId];
+    }).sort();
+
+    if (dayKeys.length === 0) {
+      results.innerHTML = '<div class="empty-text">此區間內查無 ' + (staff ? staff.name : "") + ' 的打卡紀錄</div>';
+      return;
+    }
+
+    var totalIn = 0, totalOut = 0;
+    var html = dayKeys.map(function (day) {
+      var recs = state.clockins[day][staffId].slice().sort(function (a, b) { return a.time.localeCompare(b.time); });
+      var rowsHtml = recs.map(function (r) {
+        if (r.type === "in") totalIn++; else totalOut++;
+        var typeLabel = r.type === "in" ? "上班" : "下班";
+        return '<div class="query-row-item"><span>' + typeLabel + '</span><span>' + r.time + '（距店 ' + Math.round(r.distance) + ' 公尺）</span></div>';
+      }).join("");
+      return '<div class="query-day-group"><div class="query-day-title">' + day + '</div>' + rowsHtml + '</div>';
+    }).join("");
+
+    html += '<div class="query-summary">共 ' + dayKeys.length + ' 天有紀錄，上班打卡 ' + totalIn + ' 次、下班打卡 ' + totalOut + ' 次</div>';
+    results.innerHTML = html;
   }
 
   function doClockAction(type) {
@@ -716,7 +815,6 @@
       renderFooter();
     }).catch(function () {
       selectEl.classList.remove("pending");
-      // revert visual on failure by re-rendering from last known good state
       renderTable();
     });
   }
@@ -733,6 +831,7 @@
       renderStaffChips();
       renderTable();
       renderClockPanel();
+      renderQueryStaffSelect();
       flashSaveStatus("已新增", "ok");
     });
   }
@@ -744,6 +843,7 @@
       renderStaffChips();
       renderTable();
       renderClockPanel();
+      renderQueryStaffSelect();
       flashSaveStatus("已刪除", "ok");
     });
   }
@@ -783,6 +883,7 @@
   document.getElementById("refreshBtn").onclick = function () { refreshFromRemote(true); };
   document.getElementById("clockInBtn").onclick = function () { doClockAction("in"); };
   document.getElementById("clockOutBtn").onclick = function () { doClockAction("out"); };
+  document.getElementById("querySubmitBtn").onclick = runQuery;
 
   document.getElementById("exportBtn").onclick = function () {
     var payload = { exportedAt: new Date().toISOString(), staffList: state.staffList, schedules: state.schedules, clockins: state.clockins };
@@ -877,6 +978,8 @@
     renderStaffChips();
     renderTable();
     renderClockPanel();
+    renderQueryStaffSelect();
+    defaultQueryDates();
     updateLockUI();
     refreshFromRemote(true);
     if (pollTimer) clearInterval(pollTimer);
