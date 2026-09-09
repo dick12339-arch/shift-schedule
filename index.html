@@ -2,37 +2,38 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>排班總覽</title>
 <style>
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0;
     font-family: 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', system-ui, sans-serif;
     background: #1C1815;
     color: #F2EBDD;
   }
-  .page { max-width: 1100px; margin: 0 auto; padding: 24px 16px 40px; }
+  .page { max-width: 1100px; margin: 0 auto; padding: 20px 14px calc(88px + env(safe-area-inset-bottom)); }
   header {
     display: flex; justify-content: space-between; align-items: flex-end;
     flex-wrap: wrap; gap: 12px; margin-bottom: 16px;
   }
   .eyebrow { font-size: 12px; letter-spacing: 2px; color: #C9A03E; margin-bottom: 4px; }
-  h1 { font-family: Georgia, 'Noto Serif TC', serif; font-size: 26px; margin: 0; font-weight: 600; }
+  h1 { font-family: Georgia, 'Noto Serif TC', serif; font-size: 24px; margin: 0; font-weight: 600; }
   .month-nav {
-    display: flex; align-items: center; gap: 12px;
-    background: #262019; border-radius: 8px; padding: 6px 14px;
+    display: flex; align-items: center; gap: 14px;
+    background: #262019; border-radius: 10px; padding: 8px 16px;
   }
-  .nav-arrow { font-size: 20px; color: #C9A03E; cursor: pointer; user-select: none; padding: 0 4px; }
-  .nav-arrow:hover { opacity: .75; }
-  .month-label { font-size: 15px; min-width: 92px; text-align: center; }
+  .nav-arrow { font-size: 24px; color: #C9A03E; user-select: none; padding: 4px 8px; }
+  .month-label { font-size: 16px; min-width: 96px; text-align: center; }
 
   .toolbar {
     display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center;
   }
   .btn {
-    padding: 7px 14px; border-radius: 6px; border: 1px solid #45413A;
-    background: #262019; color: #F2EBDD; font-size: 13px; cursor: pointer;
+    padding: 11px 16px; border-radius: 8px; border: 1px solid #45413A;
+    background: #262019; color: #F2EBDD; font-size: 14px; cursor: pointer;
+    min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
   }
   .btn:hover { border-color: #C9A03E; color: #C9A03E; }
   .btn.primary { background: #C9A03E; color: #241C0C; border: none; font-weight: 600; }
@@ -60,22 +61,22 @@
   .panel.open { display: block; }
   .panel-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
   .panel-row input[type=text] {
-    flex: 1; min-width: 160px; padding: 8px 10px; border-radius: 6px;
-    border: 1px solid #45413A; background: #1C1815; color: #F2EBDD; font-size: 14px; outline: none;
+    flex: 1; min-width: 160px; padding: 12px 12px; border-radius: 8px;
+    border: 1px solid #45413A; background: #1C1815; color: #F2EBDD; font-size: 16px; outline: none;
   }
   .staff-chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip {
-    display: flex; align-items: center; gap: 6px; background: #322A22;
-    border-radius: 20px; padding: 5px 10px 5px 12px; font-size: 13px;
+    display: flex; align-items: center; gap: 8px; background: #322A22;
+    border-radius: 20px; padding: 8px 12px 8px 14px; font-size: 14px;
   }
-  .chip .rm { color: #D98A8A; cursor: pointer; font-size: 12px; }
+  .chip .rm { color: #D98A8A; cursor: pointer; font-size: 15px; padding: 2px 4px; }
   .empty-text { font-size: 13px; color: #8A8175; }
 
   .save-status { font-size: 12px; color: #8A8175; margin-bottom: 12px; min-height: 16px; }
   .save-status.ok { color: #8FBF8F; }
   .save-status.err { color: #D98A8A; }
 
-  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #322A22; }
+  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #322A22; -webkit-overflow-scrolling: touch; }
   table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 720px; }
   th {
     font-size: 11.5px; font-weight: 500; text-align: center; padding: 8px 4px;
@@ -84,10 +85,10 @@
   th.weekend { color: #D98A8A; }
   .weekday-label { font-size: 10px; color: #8A8175; margin-top: 1px; }
   .sticky-col { position: sticky; left: 0; background: #241E17; min-width: 92px; padding-left: 12px; z-index: 2; }
-  td.name-cell { padding: 6px 12px; font-size: 13.5px; border-bottom: 1px solid #2A241D; white-space: nowrap; background: #241E17; }
+  td.name-cell { padding: 8px 12px; font-size: 14px; border-bottom: 1px solid #2A241D; white-space: nowrap; background: #241E17; }
   td.cell-wrap { padding: 3px; border-bottom: 1px solid #2A241D; text-align: center; }
   .cell {
-    width: 30px; height: 30px; line-height: 30px; border-radius: 6px; font-size: 12.5px;
+    width: 34px; height: 34px; line-height: 34px; border-radius: 7px; font-size: 13px;
     font-weight: 600; margin: 0 auto; cursor: pointer; transition: transform .08s ease, filter .12s ease;
   }
   .cell:hover { filter: brightness(0.96); }
@@ -95,8 +96,8 @@
   .cell.pending { opacity: .5; }
   .shift-select {
     -webkit-appearance: none; -moz-appearance: none; appearance: none;
-    width: 44px; height: 32px; border-radius: 6px; border: none;
-    font-size: 12.5px; font-weight: 600; text-align: center; text-align-last: center;
+    width: 48px; height: 38px; border-radius: 7px; border: none;
+    font-size: 16px; font-weight: 600; text-align: center; text-align-last: center;
     margin: 0 auto; display: block; cursor: pointer; transition: filter .12s ease;
     font-family: inherit;
   }
@@ -121,39 +122,58 @@
   .clock-section {
     background: #262019; border-radius: 10px; padding: 16px; margin-bottom: 20px;
   }
-  .clock-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; color: #F2EBDD; }
-  .clock-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .clock-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #F2EBDD; display: flex; align-items: center; gap: 6px; }
+  .clock-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
   .clock-row select {
-    padding: 8px 10px; border-radius: 6px; border: 1px solid #45413A;
-    background: #1C1815; color: #F2EBDD; font-size: 14px; outline: none; min-width: 120px;
+    padding: 12px 14px; border-radius: 8px; border: 1px solid #45413A;
+    background: #1C1815; color: #F2EBDD; font-size: 16px; outline: none; min-width: 140px;
+    min-height: 46px;
   }
   .clock-btn {
-    padding: 9px 18px; border-radius: 6px; border: none; font-size: 14px; font-weight: 600; cursor: pointer;
+    padding: 16px 20px; border-radius: 10px; border: none; font-size: 16px; font-weight: 700; cursor: pointer;
+    width: 100%; min-height: 54px;
   }
   .clock-btn.in { background: #F2C14E; color: #3A2E12; }
   .clock-btn.out { background: #E893A8; color: #4A1F2B; }
   .clock-btn:disabled { opacity: .5; cursor: default; }
-  .clock-msg { font-size: 13px; min-height: 18px; margin-bottom: 8px; }
+  .clock-msg { font-size: 14px; min-height: 20px; margin-bottom: 8px; font-weight: 600; }
   .clock-msg.ok { color: #8FBF8F; }
   .clock-msg.err { color: #D98A8A; }
-  .clock-log { font-size: 12.5px; color: #C7BEB0; }
-  .clock-log-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #322A22; }
+  .clock-log { font-size: 13px; color: #C7BEB0; }
+  .clock-log-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #322A22; }
   .clock-log-row:last-child { border-bottom: none; }
 
   .query-section {
     background: #262019; border-radius: 10px; padding: 16px; margin-bottom: 20px;
   }
-  .query-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .query-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
   .query-row select, .query-row input[type=date] {
-    padding: 8px 10px; border-radius: 6px; border: 1px solid #45413A;
-    background: #1C1815; color: #F2EBDD; font-size: 14px; outline: none;
+    padding: 12px 14px; border-radius: 8px; border: 1px solid #45413A;
+    background: #1C1815; color: #F2EBDD; font-size: 16px; outline: none; min-height: 46px;
   }
-  .query-results { font-size: 12.5px; }
+  .query-row .btn { width: 100%; }
+  .query-results { font-size: 13px; }
   .query-day-group { margin-bottom: 10px; }
-  .query-day-title { font-size: 12px; color: #C9A03E; font-weight: 600; margin-bottom: 4px; }
-  .query-row-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #322A22; color: #C7BEB0; }
+  .query-day-title { font-size: 13px; color: #C9A03E; font-weight: 600; margin-bottom: 4px; }
+  .query-row-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #322A22; color: #C7BEB0; }
   .query-row-item:last-child { border-bottom: none; }
   .query-summary { font-size: 12px; color: #8A8175; margin-top: 8px; }
+
+  .tab-view { display: none; }
+  .tab-view.active { display: block; }
+
+  .bottom-nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    display: flex; gap: 8px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    background: #1C1815; border-top: 1px solid #322A22;
+  }
+  .bottom-nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; padding: 8px 4px; border-radius: 10px; border: 1px solid transparent;
+    background: transparent; color: #A69B8B; font-size: 12px; cursor: pointer; min-height: 52px;
+  }
+  .bottom-nav-btn .icon { font-size: 18px; }
+  .bottom-nav-btn.active { border-color: #C9A03E; color: #C9A03E; background: #262019; }
 
   .setup-overlay {
     position: fixed; inset: 0; background: rgba(10,8,6,0.88);
@@ -165,8 +185,8 @@
   .setup-box h2 { font-family: Georgia, 'Noto Serif TC', serif; margin: 0 0 8px; font-size: 20px; color: #F2EBDD; }
   .setup-box p { font-size: 13px; color: #A69B8B; line-height: 1.6; margin: 0 0 14px; }
   .setup-box input {
-    width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #45413A;
-    background: #1C1815; color: #F2EBDD; font-size: 13px; outline: none; margin-bottom: 10px;
+    width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #45413A;
+    background: #1C1815; color: #F2EBDD; font-size: 16px; outline: none; margin-bottom: 10px;
   }
   .setup-box .err { color: #D98A8A; font-size: 12px; margin-bottom: 8px; min-height: 14px; }
 </style>
@@ -189,56 +209,73 @@
     <span class="btn" id="lockToggleBtn">🔒 編輯已鎖定（點擊解鎖）</span>
     <span class="btn" id="toggleManage">管理人員名單 ＋</span>
     <span class="btn" id="refreshBtn">重新整理 ⟳</span>
-    <span class="btn" id="exportBtn">匯出備份 (JSON)</span>
-    <span class="btn" id="importBtn">匯入備份</span>
     <span class="btn" id="apiSettingsBtn">同步設定</span>
-    <input type="file" id="importFile" accept="application/json">
     <span class="sync-status" id="syncStatus"><span class="sync-dot" id="syncDot"></span><span id="syncText">尚未同步</span></span>
   </div>
 
-  <div class="legend-row">
-    <div class="legend-item"><span class="legend-swatch" style="background:#F2C14E;border:1px solid #D9A93A"></span><span class="legend-text">早班 09:00–17:00</span></div>
-    <div class="legend-item"><span class="legend-swatch" style="background:#E893A8;border:1px solid #D97490"></span><span class="legend-text">晚班 17:00–02:00</span></div>
-    <div class="legend-item"><span class="legend-swatch" style="background:#C0392B;border:1px solid #A62F22"></span><span class="legend-text">全天班 09:00–02:00</span></div>
-    <div class="legend-item"><span class="legend-swatch" style="background:#5B564E;border:1px solid #45413A"></span><span class="legend-text">休假</span></div>
-  </div>
-
-  <div class="clock-section">
-    <div class="clock-title">定位打卡</div>
-    <div class="clock-row">
-      <select id="clockStaffSelect"></select>
-      <span class="clock-btn in" id="clockInBtn">上班打卡</span>
-      <span class="clock-btn out" id="clockOutBtn">下班打卡</span>
+  <div class="tab-view active" id="view-schedule">
+    <div class="legend-row">
+      <div class="legend-item"><span class="legend-swatch" style="background:#F2C14E;border:1px solid #D9A93A"></span><span class="legend-text">早班 09:00–17:00</span></div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#E893A8;border:1px solid #D97490"></span><span class="legend-text">晚班 17:00–02:00</span></div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#C0392B;border:1px solid #A62F22"></span><span class="legend-text">全天班 09:00–02:00</span></div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#5B564E;border:1px solid #45413A"></span><span class="legend-text">休假</span></div>
     </div>
-    <div class="clock-msg" id="clockMsg"></div>
-    <div class="clock-log" id="clockLog"></div>
-  </div>
 
-  <div class="query-section">
-    <div class="clock-title">打卡紀錄查詢</div>
-    <div class="query-row">
-      <select id="queryStaffSelect"></select>
-      <input type="date" id="queryStartDate">
-      <span style="color:#8A8175;font-size:13px;">至</span>
-      <input type="date" id="queryEndDate">
-      <span class="btn primary" id="querySubmitBtn">查詢</span>
+    <div class="panel" id="managePanel">
+      <div class="panel-row">
+        <input type="text" id="newStaffName" placeholder="輸入姓名後新增">
+        <span class="btn primary" id="addStaffBtn">新增同仁</span>
+      </div>
+      <div class="staff-chips" id="staffChips"></div>
     </div>
-    <div class="query-results" id="queryResults"></div>
+
+    <div class="save-status" id="saveStatus"></div>
+
+    <div id="tableArea"><div class="loading">載入中…</div></div>
+
+    <div class="hint">點選每格的下拉選單即可設定班別：未排／早班／晚班／全天班／休假。所有同仁看到的是同一份雲端班表，每次操作都會同步。</div>
   </div>
 
-  <div class="panel" id="managePanel">
-    <div class="panel-row">
-      <input type="text" id="newStaffName" placeholder="輸入姓名後新增">
-      <span class="btn primary" id="addStaffBtn">新增同仁</span>
+  <div class="tab-view" id="view-clock">
+    <div class="clock-section">
+      <div class="clock-title">定位打卡</div>
+      <div class="clock-row">
+        <select id="clockStaffSelect"></select>
+      </div>
+      <div class="clock-row">
+        <span class="clock-btn in" id="clockInBtn">上班打卡</span>
+      </div>
+      <div class="clock-row">
+        <span class="clock-btn out" id="clockOutBtn">下班打卡</span>
+      </div>
+      <div class="clock-msg" id="clockMsg"></div>
+      <div class="clock-log" id="clockLog"></div>
     </div>
-    <div class="staff-chips" id="staffChips"></div>
   </div>
 
-  <div class="save-status" id="saveStatus"></div>
+  <div class="tab-view" id="view-query">
+    <div class="query-section">
+      <div class="clock-title" id="queryTitle">打卡紀錄查詢 🔒</div>
+      <div class="query-row">
+        <select id="queryStaffSelect"></select>
+      </div>
+      <div class="query-row">
+        <input type="date" id="queryStartDate">
+        <span style="color:#8A8175;font-size:13px;">至</span>
+        <input type="date" id="queryEndDate">
+      </div>
+      <div class="query-row">
+        <span class="btn primary" id="querySubmitBtn">輸入密碼後查詢</span>
+      </div>
+      <div class="query-results" id="queryResults"></div>
+    </div>
+  </div>
+</div>
 
-  <div id="tableArea"><div class="loading">載入中…</div></div>
-
-  <div class="hint">點選每格的下拉選單即可設定班別：未排／早班／晚班／全天班／休假。所有同仁看到的是同一份雲端班表，每次操作都會同步。</div>
+<div class="bottom-nav">
+  <span class="bottom-nav-btn active" id="navSchedule" data-view="view-schedule"><span class="icon">📅</span>排班</span>
+  <span class="bottom-nav-btn" id="navClock" data-view="view-clock"><span class="icon">📍</span>打卡</span>
+  <span class="bottom-nav-btn" id="navQuery" data-view="view-query"><span class="icon">🔍</span>查詢</span>
 </div>
 
 <div class="setup-overlay" id="setupOverlay" style="display:none">
@@ -305,12 +342,13 @@
     setTimeout(function () { document.getElementById("unlockPasswordInput").focus(); }, 50);
   }
   function updateLockUI() {
+    var locked = !isUnlocked();
     var btn = document.getElementById("lockToggleBtn");
-    if (isUnlocked()) {
-      btn.textContent = "🔓 編輯已解鎖（點擊鎖定）";
-    } else {
-      btn.textContent = "🔒 編輯已鎖定（點擊解鎖）";
-    }
+    btn.textContent = locked ? "🔒 編輯已鎖定（點擊解鎖）" : "🔓 編輯已解鎖（點擊鎖定）";
+    var qBtn = document.getElementById("querySubmitBtn");
+    if (qBtn) qBtn.textContent = locked ? "輸入密碼後查詢" : "查詢";
+    var qTitle = document.getElementById("queryTitle");
+    if (qTitle) qTitle.textContent = locked ? "打卡紀錄查詢 🔒" : "打卡紀錄查詢 🔓";
   }
 
   function haversineDistance(lat1, lng1, lat2, lng2) {
@@ -883,45 +921,13 @@
   document.getElementById("refreshBtn").onclick = function () { refreshFromRemote(true); };
   document.getElementById("clockInBtn").onclick = function () { doClockAction("in"); };
   document.getElementById("clockOutBtn").onclick = function () { doClockAction("out"); };
-  document.getElementById("querySubmitBtn").onclick = runQuery;
-
-  document.getElementById("exportBtn").onclick = function () {
-    var payload = { exportedAt: new Date().toISOString(), staffList: state.staffList, schedules: state.schedules, clockins: state.clockins };
-    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = "排班存檔_" + state.year + pad(state.month) + ".json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    flashSaveStatus("已匯出備份", "ok");
+  document.getElementById("querySubmitBtn").onclick = function () {
+    if (!isUnlocked()) {
+      requestUnlock(function () { runQuery(); });
+      return;
+    }
+    runQuery();
   };
-
-  document.getElementById("importBtn").onclick = function () { document.getElementById("importFile").click(); };
-  document.getElementById("importFile").addEventListener("change", function (e) {
-    var file = e.target.files[0];
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function () {
-      try {
-        var data = JSON.parse(reader.result);
-        pushRemote(function (remote) {
-          remote.staffList = data.staffList || remote.staffList;
-          remote.schedules = Object.assign({}, remote.schedules, data.schedules || {});
-        }).then(function () {
-          renderStaffChips();
-          refresh();
-          flashSaveStatus("匯入成功並已同步", "ok");
-        });
-      } catch (err) {
-        flashSaveStatus("匯入失敗，檔案格式不正確", "err");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  });
 
   document.getElementById("apiSettingsBtn").onclick = function () { showSetup(true); };
   document.getElementById("lockToggleBtn").onclick = function () {
@@ -951,6 +957,20 @@
     document.getElementById("unlockOverlay").style.display = "none";
     pendingUnlockCallback = null;
   };
+
+  // ---- 底部快速操作列切換 ----
+  function switchView(viewId) {
+    var views = document.querySelectorAll(".tab-view");
+    for (var i = 0; i < views.length; i++) views[i].classList.remove("active");
+    document.getElementById(viewId).classList.add("active");
+    var navBtns = document.querySelectorAll(".bottom-nav-btn");
+    for (var j = 0; j < navBtns.length; j++) navBtns[j].classList.remove("active");
+    document.querySelector('.bottom-nav-btn[data-view="' + viewId + '"]').classList.add("active");
+    window.scrollTo(0, 0);
+  }
+  document.getElementById("navSchedule").onclick = function () { switchView("view-schedule"); };
+  document.getElementById("navClock").onclick = function () { switchView("view-clock"); };
+  document.getElementById("navQuery").onclick = function () { switchView("view-query"); };
 
   // ---- Setup overlay ----
   function showSetup(allowCancel) {
