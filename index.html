@@ -31,15 +31,42 @@
     display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center;
   }
   .btn {
-    padding: 11px 16px; border-radius: 8px; border: 1px solid #45413A;
-    background: #262019; color: #F2EBDD; font-size: 14px; cursor: pointer;
+    padding: 11px 16px; border-radius: 8px;
+    font-size: 14px; cursor: pointer;
     min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
   }
-  .btn:hover { border-color: #C9A03E; color: #C9A03E; }
-  .btn.primary { background: #C9A03E; color: #241C0C; border: none; font-weight: 600; }
-  .btn.primary:hover { opacity: .9; color: #241C0C; }
   input[type=file] { display: none; }
 
+  /* ---- 金屬光澤按鈕 ---- */
+  .shine { position: relative; overflow: hidden; background-size: 220% 220% !important; animation: chromeShift 7s ease-in-out infinite; }
+  .shine::after {
+    content: "";
+    position: absolute; top: -30%; left: -60%; width: 35%; height: 160%;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.85), transparent);
+    transform: skewX(-20deg);
+    animation: shineSweep 3.2s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes chromeShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+  @keyframes shineSweep { 0% { left: -60%; } 45% { left: 130%; } 100% { left: 130%; } }
+
+  .chrome-silver {
+    background: linear-gradient(160deg, #fafafa 0%, #d4d4d4 25%, #f4f4f4 45%, #aaaaaa 65%, #eaeaea 85%, #c7c7c7 100%);
+    color: #2a2a2a; border: 1px solid rgba(255,255,255,0.6);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.9), inset 0 -2px 3px rgba(0,0,0,0.25), 0 3px 8px rgba(0,0,0,0.35);
+  }
+  .chrome-gold {
+    background: linear-gradient(160deg, #fff6d8 0%, #e7c465 25%, #fff0b8 45%, #a8781f 65%, #f6e0a3 85%, #cda247 100%);
+    color: #3a2e12; border: 1px solid rgba(255,244,200,0.6);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.9), inset 0 -2px 3px rgba(0,0,0,0.3), 0 3px 8px rgba(0,0,0,0.35);
+  }
+  .chrome-rose {
+    background: linear-gradient(160deg, #ffe3ea 0%, #e8a0b5 25%, #ffd6e0 45%, #b45770 65%, #f8c3d1 85%, #d98aa0 100%);
+    color: #3a1520; border: 1px solid rgba(255,230,236,0.6);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.9), inset 0 -2px 3px rgba(0,0,0,0.3), 0 3px 8px rgba(0,0,0,0.35);
+  }
+
+  .btn.primary { font-weight: 600; }
   .sync-status { font-size: 12px; color: #8A8175; margin-left: auto; display: flex; align-items: center; gap: 6px; }
   .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #6B6459; display: inline-block; }
   .sync-dot.ok { background: #8FBF8F; }
@@ -130,11 +157,9 @@
     min-height: 46px;
   }
   .clock-btn {
-    padding: 16px 20px; border-radius: 10px; border: none; font-size: 16px; font-weight: 700; cursor: pointer;
+    padding: 16px 20px; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer;
     width: 100%; min-height: 54px;
   }
-  .clock-btn.in { background: #F2C14E; color: #3A2E12; }
-  .clock-btn.out { background: #E893A8; color: #4A1F2B; }
   .clock-btn:disabled { opacity: .5; cursor: default; }
   .clock-msg { font-size: 14px; min-height: 20px; margin-bottom: 8px; font-weight: 600; }
   .clock-msg.ok { color: #8FBF8F; }
@@ -169,11 +194,10 @@
   }
   .bottom-nav-btn {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 2px; padding: 8px 4px; border-radius: 10px; border: 1px solid transparent;
-    background: transparent; color: #A69B8B; font-size: 12px; cursor: pointer; min-height: 52px;
+    gap: 2px; padding: 8px 4px; border-radius: 10px;
+    font-size: 12px; cursor: pointer; min-height: 52px; font-weight: 600;
   }
   .bottom-nav-btn .icon { font-size: 18px; }
-  .bottom-nav-btn.active { border-color: #C9A03E; color: #C9A03E; background: #262019; }
 
   .setup-overlay {
     position: fixed; inset: 0; background: rgba(10,8,6,0.88);
@@ -206,10 +230,10 @@
   </header>
 
   <div class="toolbar">
-    <span class="btn" id="lockToggleBtn">🔒 編輯已鎖定（點擊解鎖）</span>
-    <span class="btn" id="toggleManage">管理人員名單 ＋</span>
-    <span class="btn" id="refreshBtn">重新整理 ⟳</span>
-    <span class="btn" id="apiSettingsBtn">同步設定</span>
+    <span class="btn chrome-silver shine" id="lockToggleBtn">🔒 編輯已鎖定（點擊解鎖）</span>
+    <span class="btn chrome-silver shine" id="toggleManage">管理人員名單 ＋</span>
+    <span class="btn chrome-silver shine" id="refreshBtn">重新整理 ⟳</span>
+    <span class="btn chrome-silver shine" id="apiSettingsBtn">同步設定</span>
     <span class="sync-status" id="syncStatus"><span class="sync-dot" id="syncDot"></span><span id="syncText">尚未同步</span></span>
   </div>
 
@@ -224,7 +248,7 @@
     <div class="panel" id="managePanel">
       <div class="panel-row">
         <input type="text" id="newStaffName" placeholder="輸入姓名後新增">
-        <span class="btn primary" id="addStaffBtn">新增同仁</span>
+        <span class="btn primary chrome-gold shine" id="addStaffBtn">新增同仁</span>
       </div>
       <div class="staff-chips" id="staffChips"></div>
     </div>
@@ -243,10 +267,10 @@
         <select id="clockStaffSelect"></select>
       </div>
       <div class="clock-row">
-        <span class="clock-btn in" id="clockInBtn">上班打卡</span>
+        <span class="clock-btn in chrome-gold shine" id="clockInBtn">上班打卡</span>
       </div>
       <div class="clock-row">
-        <span class="clock-btn out" id="clockOutBtn">下班打卡</span>
+        <span class="clock-btn out chrome-rose shine" id="clockOutBtn">下班打卡</span>
       </div>
       <div class="clock-msg" id="clockMsg"></div>
       <div class="clock-log" id="clockLog"></div>
@@ -265,7 +289,7 @@
         <input type="date" id="queryEndDate">
       </div>
       <div class="query-row">
-        <span class="btn primary" id="querySubmitBtn">輸入密碼後查詢</span>
+        <span class="btn primary chrome-gold shine" id="querySubmitBtn">輸入密碼後查詢</span>
       </div>
       <div class="query-results" id="queryResults"></div>
     </div>
@@ -273,9 +297,9 @@
 </div>
 
 <div class="bottom-nav">
-  <span class="bottom-nav-btn active" id="navSchedule" data-view="view-schedule"><span class="icon">📅</span>排班</span>
-  <span class="bottom-nav-btn" id="navClock" data-view="view-clock"><span class="icon">📍</span>打卡</span>
-  <span class="bottom-nav-btn" id="navQuery" data-view="view-query"><span class="icon">🔍</span>查詢</span>
+  <span class="bottom-nav-btn chrome-gold shine active" id="navSchedule" data-view="view-schedule"><span class="icon">📅</span>排班</span>
+  <span class="bottom-nav-btn chrome-silver shine" id="navClock" data-view="view-clock"><span class="icon">📍</span>打卡</span>
+  <span class="bottom-nav-btn chrome-silver shine" id="navQuery" data-view="view-query"><span class="icon">🔍</span>查詢</span>
 </div>
 
 <div class="setup-overlay" id="setupOverlay" style="display:none">
@@ -284,7 +308,7 @@
     <p>請貼上部署好的 Google Apps Script 網頁應用程式網址（結尾通常是 /exec）。所有同仁只要用同一個網址，就會看到同一份班表，不需要登入任何帳號。</p>
     <input type="text" id="apiUrlInput" placeholder="https://script.google.com/macros/s/xxxx/exec">
     <div class="err" id="setupErr"></div>
-    <span class="btn primary" id="saveApiUrlBtn">儲存並開始使用</span>
+    <span class="btn primary chrome-gold shine" id="saveApiUrlBtn">儲存並開始使用</span>
   </div>
 </div>
 
@@ -295,8 +319,8 @@
     <input type="password" id="unlockPasswordInput" placeholder="請輸入密碼" inputmode="numeric">
     <div class="err" id="unlockErr"></div>
     <div class="clock-row" style="margin-top:4px;">
-      <span class="btn primary" id="unlockSubmitBtn">解鎖</span>
-      <span class="btn" id="unlockCancelBtn">取消</span>
+      <span class="btn primary chrome-gold shine" id="unlockSubmitBtn">解鎖</span>
+      <span class="btn chrome-silver shine" id="unlockCancelBtn">取消</span>
     </div>
   </div>
 </div>
@@ -352,7 +376,7 @@
   }
 
   function haversineDistance(lat1, lng1, lat2, lng2) {
-    var R = 6371000; // 地球半徑(公尺)
+    var R = 6371000;
     var toRad = function (d) { return d * Math.PI / 180; };
     var dLat = toRad(lat2 - lat1);
     var dLng = toRad(lng2 - lng1);
@@ -374,8 +398,8 @@
     year: today.getFullYear(),
     month: today.getMonth() + 1,
     staffList: [],
-    schedules: {}, // { "YYYY-MM": { staffId: { day: type } } }
-    clockins: {} // { "YYYY-MM-DD": { staffId: [ {type:"in"/"out", time, lat, lng, distance} ] } }
+    schedules: {},
+    clockins: {}
   };
   var DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbxCJVTtQF8YyGYFsT89hG2mEJHV1KR-3rQYzA86Ehznc5zoDqSffah5bYSxmlq_JZIC/exec";
   var apiUrl = localStorage.getItem(API_URL_KEY) || DEFAULT_API_URL;
@@ -416,7 +440,6 @@
     } catch (e) {}
   }
 
-  // ---- Remote sync ----
   function fetchRemote() {
     return fetch(apiUrl, { method: "GET" })
       .then(function (res) { return res.json(); })
@@ -474,7 +497,6 @@
     });
   }
 
-  // ---- Rendering ----
   function renderMonthLabel() {
     document.getElementById("monthLabel").textContent = state.year + " 年 " + state.month + " 月";
   }
@@ -502,7 +524,6 @@
     });
   }
 
-  // ---- 定位打卡 ----
   function renderClockPanel() {
     var select = document.getElementById("clockStaffSelect");
     var prevVal = select.value;
@@ -550,7 +571,6 @@
     el.className = "clock-msg " + (cls || "");
   }
 
-  // ---- 打卡紀錄查詢 ----
   function renderQueryStaffSelect() {
     var select = document.getElementById("queryStaffSelect");
     var prevVal = select.value;
@@ -834,7 +854,6 @@
     area.appendChild(wrap);
   }
 
-  // ---- Mutations (each does read-modify-write against remote) ----
   function setShift(staffId, day, next, selectEl) {
     var key = ymKey(state.year, state.month);
     var meta = SHIFT_META[next];
@@ -891,7 +910,6 @@
     renderTable();
   }
 
-  // ---- Wiring ----
   document.getElementById("prevMonth").onclick = function () {
     state.month -= 1;
     if (state.month < 1) { state.month = 12; state.year -= 1; }
@@ -958,21 +976,26 @@
     pendingUnlockCallback = null;
   };
 
-  // ---- 底部快速操作列切換 ----
   function switchView(viewId) {
     var views = document.querySelectorAll(".tab-view");
     for (var i = 0; i < views.length; i++) views[i].classList.remove("active");
     document.getElementById(viewId).classList.add("active");
     var navBtns = document.querySelectorAll(".bottom-nav-btn");
-    for (var j = 0; j < navBtns.length; j++) navBtns[j].classList.remove("active");
-    document.querySelector('.bottom-nav-btn[data-view="' + viewId + '"]').classList.add("active");
+    for (var j = 0; j < navBtns.length; j++) {
+      navBtns[j].classList.remove("active");
+      navBtns[j].classList.remove("chrome-gold");
+      navBtns[j].classList.add("chrome-silver");
+    }
+    var activeBtn = document.querySelector('.bottom-nav-btn[data-view="' + viewId + '"]');
+    activeBtn.classList.add("active");
+    activeBtn.classList.remove("chrome-silver");
+    activeBtn.classList.add("chrome-gold");
     window.scrollTo(0, 0);
   }
   document.getElementById("navSchedule").onclick = function () { switchView("view-schedule"); };
   document.getElementById("navClock").onclick = function () { switchView("view-clock"); };
   document.getElementById("navQuery").onclick = function () { switchView("view-query"); };
 
-  // ---- Setup overlay ----
   function showSetup(allowCancel) {
     var overlay = document.getElementById("setupOverlay");
     var input = document.getElementById("apiUrlInput");
@@ -1006,7 +1029,6 @@
     pollTimer = setInterval(function () { refreshFromRemote(false); }, POLL_INTERVAL_MS);
   }
 
-  // init
   if (!apiUrl) {
     showSetup(false);
   } else {
